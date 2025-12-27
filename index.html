@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stranger Countdown Click-to-Settings</title>
+    <style>
+        :root {
+            --accent-color: #ff0000;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer; /* Indică faptul că se poate da click */
+        }
+
+        /* Container Imagine - placed above the timer */
+        #bg-container {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        #bg-image {
+            width: 50%;
+            height: auto;
+            max-width: 90vw;
+            max-height: 60vh;
+            object-fit: contain;
+            display: none;
+        }
+
+        /* Countdown */
+        #main-display {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(6vh); /* push countdown lower so image sits more in the mid */
+        }
+
+        #timer {
+            font-size: 6rem;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px rgba(0,0,0,0.9), 0 0 15px var(--accent-color);
+            transition: color 0.3s ease;
+        }
+
+        /* Panou Setări */
+        #settings-panel {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            background: rgba(10, 10, 10, 0.98);
+            padding: 25px;
+            border-radius: 12px;
+            z-index: 100;
+            border: 1px solid #444;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            width: 280px;
+            box-shadow: 0 0 40px rgba(0,0,0,1);
+            cursor: default; /* În interiorul panoului cursorul e normal */
+            transform: scale(1);
+        }
+
+        .setting-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.7rem;
+            margin-bottom: 5px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="datetime-local"], 
+        input[type="color"], 
+        input[type="file"],
+        input[type="range"],
+        input[type="number"] {
+            width: 100%;
+            background: #222;
+            border: 1px solid #444;
+            color: white;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+
+        /* Efect Flicker */
+        @keyframes flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+            20%, 24%, 55% { opacity: 0.2; }
+        }
+
+        .flicker-active #bg-container {
+            animation: flicker 0.3s infinite;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            cursor: pointer;
+            background: var(--accent-color);
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            filter: brightness(1.2);
+        }
+    </style>
+</head>
+<body id="main-body">
+
+    <div id="main-display">
+        <div id="bg-container">
+            <img id="bg-image" src="">
+        </div>
+        <div id="timer">00:00:00:00</div>
+    </div>
+
+    <div id="settings-panel">
+        <h3 style="margin:0 0 15px 0; font-size: 1rem; color: var(--accent-color);">SETĂRI PROIECT</h3>
+        
+        <div class="setting-group">
+            <label>Data Finală</label>
+            <input type="datetime-local" id="target-date">
+        </div>
+
+        <div class="setting-group">
+            <label>Culoare Numere</label>
+            <input type="color" id="color-picker" value="#ff0000">
+        </div>
+
+        <div class="setting-group">
+            <label>Imagine Fundal (Vector/High-Res)</label>
+            <input type="file" id="image-input" accept="image/*">
+        </div>
+
+        <div class="setting-group">
+            <label>Scalare Imagine: <span id="size-val">50</span>%</label>
+            <input type="range" id="size-slider" min="5" max="150" value="50">
+        </div>
+
+        <div class="setting-group">
+            <label>Muzică / Alarmă Finală</label>
+            <input type="file" id="audio-input" accept="audio/*">
+        </div>
+
+        <div class="setting-group">
+            <label>Auto-ascundere (secunde)</label>
+            <input type="number" id="hide-delay" value="5">
+        </div>
+
+        <div class="setting-group" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="flicker-toggle" style="width: auto;"> 
+            <label style="margin:0">Flicker la final</label>
+        </div>
+
+        <button onclick="applyAndHide()">APLICĂ CONFIGURAȚIA</button>
+        <p style="font-size: 9px; color: #555; margin-top: 10px; text-align: center;">CLICK ORIUNDE PE ECRAN PENTRU SETĂRI</p>
+    </div>
+
+    <audio id="alarm-sound"></audio>
+
+    <script>
+        let countdownInterval;
+        let hideTimeout;
+        const panel = document.getElementById('settings-panel');
+
+        // 1. Logica pentru Click -> Afișare Setări
+        document.getElementById('main-body').addEventListener('click', (e) => {
+            // Dacă dăm click pe fundal, nu pe interiorul panoului de setări
+            if (!panel.contains(e.target)) {
+                showSettings();
+            }
+        });
+
+        function showSettings() {
+            panel.classList.remove('hidden');
+            clearTimeout(hideTimeout);
+        }
+
+        function startHideTimer() {
+            const delay = document.getElementById('hide-delay').value * 1000;
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                panel.classList.add('hidden');
+            }, delay);
+        }
+
+        function applyAndHide() {
+            startCountdown();
+            startHideTimer();
+        }
+
+        // 2. Control Culoare
+        document.getElementById('color-picker').addEventListener('input', (e) => {
+            document.documentElement.style.setProperty('--accent-color', e.target.value);
+        });
+
+        // 3. Control Slider Imagine
+        const sizeSlider = document.getElementById('size-slider');
+        const bgImg = document.getElementById('bg-image');
+        sizeSlider.addEventListener('input', (e) => {
+            document.getElementById('size-val').innerText = e.target.value;
+            bgImg.style.width = e.target.value + '%';
+        });
+
+        // 4. Încărcare Imagine
+        document.getElementById('image-input').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                bgImg.src = event.target.result;
+                bgImg.style.display = 'block';
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        // 5. Încărcare Audio
+        document.getElementById('audio-input').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('alarm-sound').src = event.target.result;
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        // 6. Countdown logic
+        function startCountdown() {
+            const targetInput = document.getElementById('target-date').value;
+            if (!targetInput) return;
+
+            const targetTime = new Date(targetInput).getTime();
+            clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(() => {
+                const now = new Date().getTime();
+                const diff = targetTime - now;
+
+                if (diff <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('timer').innerText = "00:00:00:00";
+                    onFinish();
+                    return;
+                }
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                document.getElementById('timer').innerText = 
+                    `${String(d).padStart(2, '0')}:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function onFinish() {
+            const alarm = document.getElementById('alarm-sound');
+            if (alarm.src) alarm.play();
+            if (document.getElementById('flicker-toggle').checked) {
+                document.body.classList.add('flicker-active');
+            }
+        }
+    </script>
+</body>
+</html>
