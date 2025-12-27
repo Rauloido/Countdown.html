@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 512 512">
+  <!-- Generator: Adobe Illustrator 29.8.2, SVG Export Plug-In . SVG Version: 2.1.1 Build 3)  -->
+  <defs>
+    <style>
+      .st0 {
+        font-family: MyriadPro-Regular, 'Myriad Pro';
+        font-size: 50.3px;
+      }
+
+      .st1 {
+        fill: red;
+      }
+    </style>
+  </defs>
+  <rect y="0" width="512" height="512"/>
+  <circle class="st1" cx="256" cy="261.7" r="209.2"/>
+  <rect x="245.4" y="90.1" width="11.5" height="199.7"/>
+  <rect x="316.9" y="199.3" width="10.3" height="155.6" transform="translate(90.2 633.2) rotate(-97.6)"/>
+  <text class="st0" transform="translate(209.9 412.5) scale(.9 1)"><tspan x="0" y="0">Count</tspan></text>
+</svg>

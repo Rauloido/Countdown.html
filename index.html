@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stranger Countdown Click-to-Settings</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Stranger Countdown">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
     <style>
         :root {
             --accent-color: #ff0000;
@@ -176,6 +182,11 @@
         </div>
 
         <div class="setting-group">
+            <label>Scale Countdown: <span id="countdown-val">100</span>%</label>
+            <input type="range" id="countdown-scale-slider" min="50" max="200" value="100">
+        </div>
+
+        <div class="setting-group">
             <label>Muzică / Alarmă Finală</label>
             <input type="file" id="audio-input" accept="audio/*">
         </div>
@@ -191,6 +202,7 @@
         </div>
 
         <button onclick="applyAndHide()">APLICĂ CONFIGURAȚIA</button>
+        <button id="install-button" style="display:none; margin-top:8px;">Instalează aplicația</button>
         <p style="font-size: 9px; color: #555; margin-top: 10px; text-align: center;">CLICK ORIUNDE PE ECRAN PENTRU SETĂRI</p>
     </div>
 
@@ -240,6 +252,17 @@
             bgImg.style.width = e.target.value + '%';
         });
 
+        // 3.1 Scale Countdown Slider
+        const countdownSlider = document.getElementById('countdown-scale-slider');
+        const countdownVal = document.getElementById('countdown-val');
+        const timerEl = document.getElementById('timer');
+        const baseRem = 6; // matches initial CSS font-size: 6rem
+        countdownSlider.addEventListener('input', (e) => {
+            const v = e.target.value;
+            countdownVal.innerText = v;
+            timerEl.style.fontSize = (baseRem * v / 100) + 'rem';
+        });
+
         // 4. Încărcare Imagine
         document.getElementById('image-input').addEventListener('change', function(e) {
             const reader = new FileReader();
@@ -257,6 +280,27 @@
                 document.getElementById('alarm-sound').src = event.target.result;
             }
             reader.readAsDataURL(e.target.files[0]);
+        });
+
+        // 6. PWA: service worker registration + install prompt handling
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW registration failed', err));
+        }
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-button');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            installBtn.style.display = 'none';
         });
 
         // 6. Countdown logic
