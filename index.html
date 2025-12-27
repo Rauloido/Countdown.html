@@ -9,9 +9,6 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Stranger Countdown">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- iOS prefers PNG apple-touch-icon; include an inline PNG fallback data URI plus SVG mask-icon for Safari -->
-    <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NgYGBgAAAABQABDQottAAAAABJRU5ErkJggg==">
-    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2NgYGBgAAAABQABDQottAAAAABJRU5ErkJggg==">
     <link rel="mask-icon" href="icons/icon.png" color="#ff0000">
     <link rel="apple-touch-icon" href="icons/icon.png">
     <style>
@@ -151,6 +148,23 @@
         button:hover {
             filter: brightness(1.2);
         }
+        /* insecure origin overlay */
+        #insecure-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.85);
+            color: #fff;
+            z-index: 9999;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.95rem;
+            gap: 12px;
+            flex-direction: column;
+        }
+        #insecure-overlay button { width: auto; padding: 8px 12px; }
     </style>
 </head>
 <body id="main-body">
@@ -211,6 +225,17 @@
     </div>
 
     <audio id="alarm-sound"></audio>
+
+    <div id="insecure-overlay">
+        <div><strong>Instalare eșuată — detalii</strong></div>
+        <div id="insecure-msg">Verific...</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+            <button id="cmd-py">python -m http.server 8000</button>
+            <button id="cmd-npm">npx http-server -p 8000</button>
+        </div>
+        <div style="font-size:0.85rem; opacity:0.9; margin-top:6px;">După pornire, deschide: <strong>http://localhost:8000/</strong></div>
+        <button id="overlay-close">OK, am înțeles</button>
+    </div>
 
     <script>
         let countdownInterval;
