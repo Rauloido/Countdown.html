@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="Stranger Countdown">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="mask-icon" href="icons/icon.svg" color="#ff0000">
-    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="apple-touch-icon" href="icons/icon.svg
     <style>
         :root {
             --accent-color: #ff0000;
@@ -311,25 +311,70 @@
             reader.readAsDataURL(e.target.files[0]);
         });
 
-        // 6. PWA: service worker registration + install prompt handling
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch((err) => console.warn('SW registration failed', err));
-        }
+        // 6. PWA: improved service worker registration and install guidance
+        (async () => {
+            const installBtn = document.getElementById('install-button');
+            const overlay = document.getElementById('insecure-overlay');
+            const insecureMsg = document.getElementById('insecure-msg');
 
-        let deferredPrompt;
-        const installBtn = document.getElementById('install-button');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block';
+            function showOverlay(msg) {
+                insecureMsg.innerText = msg;
+                overlay.style.display = 'flex';
+            }
+
+            try {
+                if (location.protocol === 'file:') {
+                    showOverlay('Pagina este deschisă local (file://). Servirea de pe HTTPS sau localhost este necesară pentru instalare.');
+                } else if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                    showOverlay('Pagina nu rulează pe HTTPS; instalarea PWA necesită HTTPS sau localhost.');
+                } else {
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            await navigator.serviceWorker.register('./sw.js');
+                        } catch (swErr) {
+                            console.warn('ServiceWorker registration failed:', swErr);
+                            showOverlay('Service Worker nu s-a putut înregistra: ' + (swErr && swErr.message ? swErr.message : swErr));
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('PWA setup error', err);
+            }
+
+            // beforeinstallprompt handling
+            let deferredPrompt;
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                installBtn.style.display = 'block';
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) {
+                    showOverlay('Instalarea nu este disponibilă în acest browser/versiune.');
+                    return;
+                }
+                deferredPrompt.prompt();
+                const choice = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+                if (choice && choice.outcome && choice.outcome === 'dismissed') {
+                    showOverlay('Utilizatorul a închis dialogul de instalare.');
+                }
+            });
+        })();
+
+        // Overlay buttons: copy recommended commands to clipboard
+        document.getElementById('cmd-py').addEventListener('click', () => {
+            navigator.clipboard && navigator.clipboard.writeText('python -m http.server 8000');
+            alert('Comanda copiată în clipboard: python -m http.server 8000');
         });
-
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            installBtn.style.display = 'none';
+        document.getElementById('cmd-npm').addEventListener('click', () => {
+            navigator.clipboard && navigator.clipboard.writeText('npx http-server -p 8000');
+            alert('Comanda copiată în clipboard: npx http-server -p 8000');
+        });
+        document.getElementById('overlay-close').addEventListener('click', () => {
+            document.getElementById('insecure-overlay').style.display = 'none';
         });
 
         // 6. Countdown logic
